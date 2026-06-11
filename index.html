@@ -2,15 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0d0d1a">
 <title>Keithris</title>
-<!-- v01: core playable game -->
+<!-- v02: mobile gestures + polish -->
 <style>
   :root {
     color-scheme: dark;
     --bg: #0d0d1a;
     --panel: #1c1c30;
+    --panel-hi: #232342;
     --line: #34344f;
     --border: #9a9ac0;
     --text: #ffffff;
@@ -25,44 +26,125 @@
     --c-L: #ffa733;
   }
   * { box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
     margin: 0;
-    min-height: 100dvh;
     background: var(--bg);
+    background-image: radial-gradient(ellipse 120% 60% at 50% -10%, #181838 0%, var(--bg) 70%);
+    background-attachment: fixed;
     color: var(--text);
     font-family: system-ui, sans-serif;
+    overscroll-behavior: none;
+  }
+  #stars {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    pointer-events: none;
+  }
+  #app {
+    height: 100dvh;
+    overflow-y: auto; /* under extreme zoom: scroll, never clip */
+    overscroll-behavior: none;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 0.5rem;
+    gap: 0.5rem;
+    padding: max(0.4rem, env(safe-area-inset-top))
+             max(0.5rem, env(safe-area-inset-right))
+             max(0.4rem, env(safe-area-inset-bottom))
+             max(0.5rem, env(safe-area-inset-left));
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 30rem;
   }
   h1 {
-    font-size: clamp(1.6rem, 5vw, 2.4rem);
-    margin: 0.25rem 0;
-    letter-spacing: 0.08em;
+    font-size: clamp(1.25rem, 4.5vw, 1.9rem);
+    margin: 0;
+    letter-spacing: 0.1em;
     color: var(--c-I);
+    text-shadow: 0 0 10px rgba(0, 229, 255, 0.55), 0 0 28px rgba(0, 229, 255, 0.3);
   }
-  main {
+  #play {
     display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    justify-content: center;
-    align-items: flex-start;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1 1 auto;
+    min-height: 0;
     width: 100%;
-    max-width: 60rem;
+  }
+  #hud {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: stretch;
+    gap: 0.5rem;
+    width: 100%;
+    max-width: 30rem;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    min-width: 0;
+  }
+  .stat, .preview-box {
+    background: linear-gradient(180deg, var(--panel-hi), var(--panel));
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 0.3rem 0.5rem;
+    text-align: center;
+    min-width: 0;
+  }
+  .label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--label);
+    white-space: nowrap;
+  }
+  .stat .value {
+    display: block;
+    font-size: clamp(1.05rem, 4.5vw, 1.45rem);
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  .preview-box canvas { display: block; margin: 0.2rem auto 0; }
+  .preview-box.next canvas { width: clamp(5.5rem, 23vw, 8.5rem); aspect-ratio: 3 / 1; }
+  .preview-box.hold canvas { width: clamp(1.9rem, 8vw, 2.9rem); aspect-ratio: 1 / 1; }
+  .board-area {
+    flex: 1 1 auto;
+    min-height: 8rem;
+    height: 100%;
+    width: 100%;
+    display: flex;
+    justify-content: center;
   }
   .board-wrap {
     position: relative;
-    flex: 0 1 auto;
-    max-width: 100%;
+    height: 100%;
+    max-width: min(100%, 24rem);
+    aspect-ratio: 1 / 2;
   }
   #board {
     display: block;
-    width: min(100%, calc((100dvh - 14rem) / 2), 19rem);
-    aspect-ratio: 1 / 2;
-    background: var(--bg);
+    width: 100%;
+    height: 100%;
+    background: rgba(13, 13, 26, 0.85);
     border: 2px solid var(--border);
     border-radius: 4px;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
   .overlay {
     position: absolute;
@@ -72,81 +154,60 @@
     align-items: center;
     justify-content: center;
     gap: 0.75rem;
-    background: rgba(13, 13, 26, 0.88);
+    background: rgba(13, 13, 26, 0.92);
     text-align: center;
     padding: 1rem;
     border-radius: 4px;
+    overflow-y: auto;
   }
   .overlay[hidden] { display: none; }
   .overlay h2 { margin: 0; font-size: clamp(1.3rem, 4vw, 1.8rem); }
-  .overlay p { margin: 0; color: var(--label); font-size: 1rem; }
-  aside {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-    min-width: 9rem;
-    max-width: 100%;
-  }
-  .stat, .preview-box {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 0.5rem 0.75rem;
-  }
-  .stat .label, .preview-box .label {
-    display: block;
-    font-size: 0.85rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--label);
-  }
-  .stat .value {
-    display: block;
-    font-size: 1.5rem;
-    font-variant-numeric: tabular-nums;
-  }
-  .preview-box canvas {
-    display: block;
-    width: 100%;
-    max-width: 7rem;
-    margin: 0.25rem auto 0;
-  }
+  .overlay p { margin: 0; color: var(--label); font-size: 1rem; line-height: 1.5; }
   button {
     font: inherit;
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     color: var(--text);
     background: var(--panel);
     border: 2px solid var(--border);
     border-radius: 8px;
-    padding: 0.6rem 1.2rem;
+    padding: 0.5rem 1.1rem;
+    min-height: 2.75rem;
     cursor: pointer;
     touch-action: manipulation;
   }
   button:hover { background: #2a2a45; }
   button:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
-  .primary { border-color: var(--c-I); }
+  .primary { border-color: var(--c-I); box-shadow: 0 0 12px rgba(0, 229, 255, 0.25); }
+  #btns-toggle { display: none; }
+  @media (pointer: coarse) {
+    #btns-toggle { display: inline-block; }
+  }
   #touch-controls {
     display: grid;
-    grid-template-columns: repeat(4, minmax(3.5rem, 5rem));
+    grid-template-columns: repeat(4, minmax(3.5rem, 5.5rem));
     gap: 0.5rem;
-    margin: 1rem 0 0.5rem;
+    margin: 0.25rem 0;
     max-width: 100%;
   }
+  #touch-controls[hidden] { display: none; }
   #touch-controls button {
-    font-size: 1.5rem;
-    padding: 0.75rem 0;
-    min-height: 3.25rem;
+    font-size: 1.4rem;
+    padding: 0.6rem 0;
+    min-height: 3rem;
     user-select: none;
     -webkit-user-select: none;
     touch-action: none;
   }
   footer {
-    margin-top: 0.75rem;
     color: var(--label);
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     max-width: 38rem;
     text-align: center;
-    line-height: 1.6;
+    line-height: 1.7;
+    display: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    footer { display: block; }
   }
   footer kbd {
     background: var(--panel);
@@ -157,45 +218,66 @@
     color: var(--text);
   }
   #status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-  @media (hover: hover) and (pointer: fine) {
-    #touch-controls { display: none; }
+  /* Short landscape (phones rotated): HUD beside the board */
+  @media (orientation: landscape) and (max-height: 30rem) {
+    h1 { display: none; }
+    header { position: absolute; top: 0.4rem; right: 0.5rem; width: auto; z-index: 2; }
+    #play { flex-direction: row; justify-content: center; align-items: stretch; }
+    #hud {
+      grid-template-columns: 1fr;
+      width: auto;
+      max-width: 10rem;
+      align-content: start;
+    }
+    .stats { grid-template-columns: 1fr; }
+    .board-area { width: auto; flex: 0 1 auto; }
   }
 </style>
 </head>
 <body>
-<h1>KEITHRIS</h1>
-<main>
-  <div class="board-wrap">
-    <canvas id="board" width="300" height="600"></canvas>
-    <div class="overlay" id="overlay">
-      <h2 id="overlay-title">Keithris</h2>
-      <p id="overlay-text">A Tetris game for Keith.</p>
-      <button id="overlay-btn" class="primary">Start</button>
+<canvas id="stars" aria-hidden="true"></canvas>
+<div id="app">
+  <header>
+    <h1>KEITHRIS</h1>
+    <button id="pause-btn">Pause</button>
+  </header>
+  <div id="play">
+    <div id="hud">
+      <div class="preview-box hold"><span class="label">Hold</span><canvas id="hold" width="96" height="96"></canvas></div>
+      <div class="stats">
+        <div class="stat"><span class="label">Score</span><span class="value" id="score">0</span></div>
+        <div class="stat"><span class="label">Level</span><span class="value" id="level">1</span></div>
+        <div class="stat"><span class="label">Lines</span><span class="value" id="lines">0</span></div>
+      </div>
+      <div class="preview-box next"><span class="label">Next</span><canvas id="next" width="288" height="96"></canvas></div>
+    </div>
+    <div class="board-area">
+      <div class="board-wrap">
+        <canvas id="board" width="300" height="600" aria-label="Keithris game board. On touch screens: drag to move, tap to rotate, flick down to drop."></canvas>
+        <div class="overlay" id="overlay">
+          <h2 id="overlay-title">Keithris</h2>
+          <p id="overlay-text">A Tetris game for Keith.</p>
+          <button id="overlay-btn" class="primary">Start</button>
+          <button id="btns-toggle">Buttons: off</button>
+        </div>
+      </div>
     </div>
   </div>
-  <aside>
-    <div class="stat"><span class="label">Score</span><span class="value" id="score">0</span></div>
-    <div class="stat"><span class="label">Level</span><span class="value" id="level">1</span></div>
-    <div class="stat"><span class="label">Lines</span><span class="value" id="lines">0</span></div>
-    <div class="preview-box"><span class="label">Next</span><canvas id="next" width="96" height="288"></canvas></div>
-    <div class="preview-box"><span class="label">Hold</span><canvas id="hold" width="96" height="96"></canvas></div>
-    <button id="pause-btn">Pause</button>
-  </aside>
-</main>
-<div id="touch-controls" aria-label="Game controls">
-  <button id="t-left" aria-label="Move left">◀</button>
-  <button id="t-right" aria-label="Move right">▶</button>
-  <button id="t-ccw" aria-label="Rotate counter-clockwise">⟲</button>
-  <button id="t-cw" aria-label="Rotate clockwise">⟳</button>
-  <button id="t-down" aria-label="Soft drop">▼</button>
-  <button id="t-drop" aria-label="Hard drop">⤓</button>
-  <button id="t-hold" aria-label="Hold piece">⇄</button>
-  <button id="t-pause" aria-label="Pause">⏸</button>
+  <div id="touch-controls" aria-label="Game controls" hidden>
+    <button id="t-left" aria-label="Move left">◀</button>
+    <button id="t-right" aria-label="Move right">▶</button>
+    <button id="t-ccw" aria-label="Rotate counter-clockwise">⟲</button>
+    <button id="t-cw" aria-label="Rotate clockwise">⟳</button>
+    <button id="t-down" aria-label="Soft drop">▼</button>
+    <button id="t-drop" aria-label="Hard drop">⤓</button>
+    <button id="t-hold" aria-label="Hold piece">⇄</button>
+    <button id="t-pause" aria-label="Pause">⏸</button>
+  </div>
+  <footer>
+    <kbd>←</kbd> <kbd>→</kbd> move · <kbd>↓</kbd> soft drop · <kbd>Space</kbd> hard drop ·
+    <kbd>Z</kbd>/<kbd>X</kbd> or <kbd>↑</kbd> rotate · <kbd>C</kbd> hold · <kbd>P</kbd> pause
+  </footer>
 </div>
-<footer>
-  <kbd>←</kbd> <kbd>→</kbd> move · <kbd>↓</kbd> soft drop · <kbd>Space</kbd> hard drop ·
-  <kbd>Z</kbd>/<kbd>X</kbd> or <kbd>↑</kbd> rotate · <kbd>C</kbd> hold · <kbd>P</kbd> pause
-</footer>
 <div id="status" role="status" aria-live="polite"></div>
 
 <script>
@@ -206,6 +288,7 @@ const COLS = 10, VISIBLE = 20, HIDDEN = 2, ROWS = VISIBLE + HIDDEN;
 const DAS = 170, ARR = 45;           // delayed auto-shift, auto-repeat (ms)
 const LOCK_DELAY = 500, MAX_LOCK_RESETS = 15;
 const PREVIEW_COUNT = 3;
+const FLASH_MS = 160;
 
 const SHAPES = {
   I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
@@ -252,6 +335,12 @@ let score, level, linesCleared, dropTimer, lockTimer, lockResets, grounded;
 let state = 'menu'; // menu | playing | paused | over
 let softDropping = false;
 let lastTime = 0;
+let pieceSeq = 0;          // bumps every spawn; lets gestures detect piece changes
+let flashRows = null;      // visible row indices being flashed
+let flashUntil = 0;
+
+const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)');
+const COARSE = window.matchMedia('(pointer: coarse)').matches;
 
 // ---------- DOM ----------
 const cvs = document.getElementById('board');
@@ -269,6 +358,15 @@ const levelEl = document.getElementById('level');
 const linesEl = document.getElementById('lines');
 const statusEl = document.getElementById('status');
 const pauseBtn = document.getElementById('pause-btn');
+const touchControls = document.getElementById('touch-controls');
+const btnsToggle = document.getElementById('btns-toggle');
+
+function capturePointer(el, e) {
+  try { el.setPointerCapture(e.pointerId); } catch (err) { /* synthetic or stale pointer */ }
+}
+
+const GESTURE_HINTS = 'Drag to move · tap to rotate (left third rotates the other way) · drag down to soft drop · flick down to hard drop · swipe up to hold.';
+const KEY_HINTS = 'Arrow keys move · Z/X rotate · Space drops · C holds · P pauses.';
 
 // ---------- Helpers ----------
 function emptyBoard() {
@@ -329,6 +427,7 @@ function spawnPiece(type) {
 function nextPiece() {
   refillQueue();
   cur = spawnPiece(queue.shift());
+  pieceSeq++;
   canHold = true;
   dropTimer = 0;
   lockTimer = 0;
@@ -396,6 +495,7 @@ function holdPiece() {
   const prev = holdType;
   holdType = cur.type;
   cur = prev ? spawnPiece(prev) : null;
+  pieceSeq++;
   if (!prev) nextPiece();
   else {
     canHold = false;
@@ -422,8 +522,10 @@ function lockPiece() {
 
 function clearLines() {
   let cleared = 0;
+  const flashed = [];
   for (let r = ROWS - 1; r >= 0; r--) {
     if (board[r].every(cell => cell !== null)) {
+      flashed.push(r - HIDDEN);
       board.splice(r, 1);
       board.unshift(Array(COLS).fill(null));
       cleared++;
@@ -431,6 +533,10 @@ function clearLines() {
     }
   }
   if (cleared > 0) {
+    if (!REDUCED_MOTION.matches) {
+      flashRows = flashed;
+      flashUntil = performance.now() + FLASH_MS;
+    }
     addScore(LINE_SCORES[cleared] * level);
     linesCleared += cleared;
     linesEl.textContent = linesCleared;
@@ -464,6 +570,7 @@ function startGame() {
   scoreEl.textContent = '0';
   levelEl.textContent = '1';
   linesEl.textContent = '0';
+  flashRows = null;
   state = 'playing';
   overlay.hidden = true;
   pauseBtn.textContent = 'Pause';
@@ -563,25 +670,31 @@ function fitCanvas() {
 
 function draw() {
   const w = cvs.width, h = cvs.height;
-  const cell = h / VISIBLE;
   ctx.clearRect(0, 0, w, h);
+
+  // Letterbox: keep cells square whatever shape the canvas ends up.
+  const cell = Math.min(w / COLS, h / VISIBLE);
+  const fw = cell * COLS, fh = cell * VISIBLE;
+  const ox = (w - fw) / 2, oy = (h - fh) / 2;
+  ctx.save();
+  ctx.translate(ox, oy);
 
   // Grid
   ctx.strokeStyle = '#34344f';
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (let c = 1; c < COLS; c++) {
-    ctx.moveTo(c * cell, 0); ctx.lineTo(c * cell, h);
+    ctx.moveTo(c * cell, 0); ctx.lineTo(c * cell, fh);
   }
   for (let r = 1; r < VISIBLE; r++) {
-    ctx.moveTo(0, r * cell); ctx.lineTo(w, r * cell);
+    ctx.moveTo(0, r * cell); ctx.lineTo(fw, r * cell);
   }
   ctx.stroke();
 
   // Settled cells
   for (let r = HIDDEN; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
-      if (board[r] && board[r][c]) drawCell(ctx, c, r - HIDDEN, cell, COLORS[board[r][c]], 1);
+      if (board[r] && board[r][c]) drawCell(ctx, c, r - HIDDEN, cell, COLORS[board[r][c]], 1, false);
     }
   }
 
@@ -595,12 +708,27 @@ function draw() {
         if (y >= 0) drawGhost(ctx, cur.col + c, y, cell, COLORS[cur.type]);
       });
     }
-    // Active piece
+    // Active piece (with glow)
     forEachCell(cur.matrix, (r, c) => {
       const y = cur.row + r - HIDDEN;
-      if (y >= 0) drawCell(ctx, cur.col + c, y, cell, COLORS[cur.type], 1);
+      if (y >= 0) drawCell(ctx, cur.col + c, y, cell, COLORS[cur.type], 1, true);
     });
   }
+
+  // Line-clear flash
+  if (flashRows) {
+    const now = performance.now();
+    if (now < flashUntil) {
+      ctx.fillStyle = '#ffffff';
+      ctx.globalAlpha = 0.8 * (flashUntil - now) / FLASH_MS;
+      for (const r of flashRows) ctx.fillRect(0, r * cell, fw, cell);
+      ctx.globalAlpha = 1;
+    } else {
+      flashRows = null;
+    }
+  }
+
+  ctx.restore();
 }
 
 function forEachCell(matrix, fn) {
@@ -609,9 +737,17 @@ function forEachCell(matrix, fn) {
       if (matrix[r][c]) fn(r, c);
 }
 
-function drawCell(g, x, y, size, color, alpha) {
+function drawCell(g, x, y, size, color, alpha, glow) {
   const pad = Math.max(1, size * 0.06);
   g.globalAlpha = alpha;
+  if (glow) {
+    g.save();
+    g.shadowColor = color;
+    g.shadowBlur = size * 0.45;
+    g.fillStyle = color;
+    g.fillRect(x * size + pad, y * size + pad, size - pad * 2, size - pad * 2);
+    g.restore();
+  }
   g.fillStyle = color;
   g.fillRect(x * size + pad, y * size + pad, size - pad * 2, size - pad * 2);
   // inner shading for depth
@@ -632,28 +768,26 @@ function drawGhost(g, x, y, size, color) {
 }
 
 function drawPreviews() {
-  drawMiniList(nextCtx, nextCvs, queue.slice(0, PREVIEW_COUNT));
-  drawMiniList(holdCtx, holdCvs, holdType ? [holdType] : []);
+  drawMiniRow(nextCtx, nextCvs, queue.slice(0, PREVIEW_COUNT), PREVIEW_COUNT);
+  drawMiniRow(holdCtx, holdCvs, holdType ? [holdType] : [], 1);
 }
 
-function drawMiniList(g, canvas, types) {
+// Draws pieces left-to-right in `slots` equal slots.
+function drawMiniRow(g, canvas, types, slots) {
   const dpr = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
   if (rect.width > 0) {
-    const w = Math.round(rect.width * dpr);
-    const slot = w;
-    const h = slot * Math.max(1, types.length === 0 ? 1 : types.length);
+    const w = Math.round(rect.width * dpr), h = Math.round(rect.height * dpr);
     if (canvas.width !== w || canvas.height !== h) {
       canvas.width = w;
       canvas.height = h;
-      canvas.style.height = (rect.width * Math.max(1, types.length || 1)) + 'px';
     }
   }
   g.clearRect(0, 0, canvas.width, canvas.height);
-  const slot = canvas.width;
+  const slotW = canvas.width / slots;
+  const slot = Math.min(slotW, canvas.height);
   types.forEach((type, i) => {
     const m = SHAPES[type];
-    // bounding box of filled cells
     let minR = 4, maxR = -1, minC = 4, maxC = -1;
     forEachCell(m, (r, c) => {
       minR = Math.min(minR, r); maxR = Math.max(maxR, r);
@@ -661,8 +795,8 @@ function drawMiniList(g, canvas, types) {
     });
     const bw = maxC - minC + 1, bh = maxR - minR + 1;
     const cell = slot / 4.8;
-    const ox = (slot - bw * cell) / 2;
-    const oy = i * slot + (slot - bh * cell) / 2;
+    const ox = i * slotW + (slotW - bw * cell) / 2;
+    const oy = (canvas.height - bh * cell) / 2;
     forEachCell(m, (r, c) => {
       const px = ox + (c - minC) * cell, py = oy + (r - minR) * cell;
       const pad = Math.max(1, cell * 0.07);
@@ -671,6 +805,33 @@ function drawMiniList(g, canvas, types) {
     });
   });
 }
+
+window.addEventListener('resize', drawPreviews);
+
+// ---------- Starfield ----------
+const starsCvs = document.getElementById('stars');
+const starsCtx = starsCvs.getContext('2d');
+
+function drawStars() {
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.round(window.innerWidth * dpr), h = Math.round(window.innerHeight * dpr);
+  starsCvs.width = w;
+  starsCvs.height = h;
+  const count = Math.round((w * h) / (dpr * dpr) / 12000);
+  const palette = ['#ffffff', '#ffffff', '#ffffff', '#00e5ff', '#ffd600', '#d9a6ff'];
+  for (let i = 0; i < count; i++) {
+    const x = Math.random() * w, y = Math.random() * h;
+    const r = (Math.random() * 1.2 + 0.4) * dpr;
+    starsCtx.fillStyle = palette[Math.floor(Math.random() * palette.length)];
+    starsCtx.globalAlpha = Math.random() * 0.35 + 0.1;
+    starsCtx.beginPath();
+    starsCtx.arc(x, y, r, 0, Math.PI * 2);
+    starsCtx.fill();
+  }
+  starsCtx.globalAlpha = 1;
+}
+drawStars();
+window.addEventListener('resize', drawStars);
 
 // ---------- Keyboard ----------
 const repeaters = new Map(); // key -> {timeout, interval}
@@ -728,12 +889,142 @@ document.addEventListener('keyup', (e) => {
 
 window.addEventListener('blur', stopAllRepeats);
 
-// ---------- Touch controls ----------
+// ---------- Gestures on the board ----------
+// Drag horizontally: piece follows finger cell-by-cell.
+// Drag down: soft drop cell-by-cell. Fast downward flick: hard drop.
+// Tap right two-thirds: rotate CW. Tap left third: rotate CCW. Swipe up: hold.
+const TAP_MS = 250, TAP_SLOP = 10;
+const FLICK_VY = 0.7;      // px/ms downward at release
+const FLICK_MIN_DY = 24;   // px total downward travel
+const SWIPE_UP_DY = -30;   // px total upward travel
+
+const gesture = {
+  active: false, id: null, seq: 0,
+  startX: 0, startY: 0, startTime: 0,
+  baseCol: 0, baseY: 0,
+  moved: false, trace: [],
+};
+
+function gestureCellPx() {
+  const rect = cvs.getBoundingClientRect();
+  return Math.min(rect.width / COLS, rect.height / VISIBLE);
+}
+
+cvs.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse') return;
+  if (state !== 'playing' || !cur || gesture.active) return;
+  e.preventDefault();
+  capturePointer(cvs, e);
+  gesture.active = true;
+  gesture.id = e.pointerId;
+  gesture.seq = pieceSeq;
+  gesture.startX = e.clientX;
+  gesture.startY = e.clientY;
+  gesture.startTime = performance.now();
+  gesture.baseCol = cur.col;
+  gesture.baseY = e.clientY;
+  gesture.moved = false;
+  gesture.trace = [{ y: e.clientY, t: performance.now() }];
+});
+
+cvs.addEventListener('pointermove', (e) => {
+  if (!gesture.active || e.pointerId !== gesture.id) return;
+  if (state !== 'playing' || !cur) return;
+  e.preventDefault();
+
+  // Piece changed under us (locked mid-drag): re-anchor instead of teleporting the new piece.
+  if (gesture.seq !== pieceSeq) {
+    gesture.seq = pieceSeq;
+    gesture.startX = e.clientX;
+    gesture.baseCol = cur.col;
+    gesture.baseY = e.clientY;
+  }
+
+  const cellPx = gestureCellPx();
+  if (!cellPx) return;
+
+  const dx = e.clientX - gesture.startX;
+  const dyTotal = e.clientY - gesture.startY;
+  if (Math.abs(dx) > TAP_SLOP || Math.abs(dyTotal) > TAP_SLOP) gesture.moved = true;
+
+  // Horizontal: step toward the column under the finger.
+  const targetCol = gesture.baseCol + Math.round(dx / cellPx);
+  let guard = COLS;
+  while (cur && cur.col < targetCol && guard-- > 0) { if (!tryMove(0, 1)) break; }
+  guard = COLS;
+  while (cur && cur.col > targetCol && guard-- > 0) { if (!tryMove(0, -1)) break; }
+
+  // Vertical: soft drop one cell per cell-height dragged. Never moves up.
+  gesture.baseY = Math.min(gesture.baseY, e.clientY);
+  let guardV = VISIBLE;
+  while (cur && e.clientY - gesture.baseY >= cellPx && guardV-- > 0) {
+    if (tryMove(1, 0)) addScore(1);
+    else break;
+    gesture.baseY += cellPx;
+  }
+
+  const now = performance.now();
+  gesture.trace.push({ y: e.clientY, t: now });
+  while (gesture.trace.length > 2 && now - gesture.trace[0].t > 120) gesture.trace.shift();
+});
+
+function endGesture(e, cancelled) {
+  if (!gesture.active || e.pointerId !== gesture.id) return;
+  gesture.active = false;
+  if (cancelled || state !== 'playing' || !cur || gesture.seq !== pieceSeq) return;
+
+  const now = performance.now();
+  const duration = now - gesture.startTime;
+  const dx = e.clientX - gesture.startX;
+  const dy = e.clientY - gesture.startY;
+
+  // Tap: rotate. Left third of the board rotates CCW.
+  if (!gesture.moved && duration < TAP_MS) {
+    const rect = cvs.getBoundingClientRect();
+    if (e.clientX < rect.left + rect.width / 3) tryRotate(-1);
+    else tryRotate(1);
+    return;
+  }
+
+  // Swipe up: hold.
+  if (dy <= SWIPE_UP_DY && Math.abs(dy) > Math.abs(dx) && duration < 400) {
+    holdPiece();
+    return;
+  }
+
+  // Fast downward flick: hard drop.
+  const first = gesture.trace[0];
+  const span = now - first.t;
+  const vy = span > 0 ? (e.clientY - first.y) / span : 0;
+  if (vy > FLICK_VY && dy > FLICK_MIN_DY && Math.abs(dy) > Math.abs(dx) * 1.2) {
+    hardDrop();
+  }
+}
+
+cvs.addEventListener('pointerup', (e) => endGesture(e, false));
+cvs.addEventListener('pointercancel', (e) => endGesture(e, true));
+
+// ---------- Touch buttons (toggleable; gestures are the default) ----------
+let buttonsOn = false;
+try { buttonsOn = localStorage.getItem('keithris-buttons') === '1'; } catch (err) { /* private mode */ }
+
+function applyButtonsPref() {
+  touchControls.hidden = !buttonsOn;
+  btnsToggle.textContent = buttonsOn ? 'Buttons: on' : 'Buttons: off';
+}
+
+btnsToggle.addEventListener('click', () => {
+  buttonsOn = !buttonsOn;
+  try { localStorage.setItem('keithris-buttons', buttonsOn ? '1' : '0'); } catch (err) { /* ignore */ }
+  applyButtonsPref();
+  announce(buttonsOn ? 'On-screen buttons shown' : 'On-screen buttons hidden');
+});
+
 function bindHoldButton(id, key, action) {
   const el = document.getElementById(id);
   el.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    el.setPointerCapture(e.pointerId);
+    capturePointer(el, e);
     startRepeat(key, action);
   });
   const stop = () => stopRepeat(key);
@@ -752,7 +1043,7 @@ bindHoldButton('t-right', 'tright', () => tryMove(0, 1));
   const el = document.getElementById('t-down');
   el.addEventListener('pointerdown', (e) => {
     e.preventDefault();
-    el.setPointerCapture(e.pointerId);
+    capturePointer(el, e);
     softDropping = true;
   });
   const stop = () => { softDropping = false; };
@@ -769,6 +1060,8 @@ bindTapButton('t-pause', () => { if (state === 'playing' || state === 'paused') 
 board = emptyBoard();
 queue = [];
 bag = [];
+applyButtonsPref();
+overlayText.textContent = 'A Tetris game for Keith. ' + (COARSE ? GESTURE_HINTS : KEY_HINTS);
 requestAnimationFrame(update);
 </script>
 </body>
