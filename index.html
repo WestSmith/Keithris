@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0d0d1a">
 <title>Keithris</title>
-<!-- v02: mobile gestures + polish -->
+<!-- v03: feel + fanfare + sound + Keith -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230d0d1a'/%3E%3Crect x='4' y='4' width='11' height='11' rx='2' fill='%2300e5ff'/%3E%3Crect x='17' y='4' width='11' height='11' rx='2' fill='%23ffd600'/%3E%3Crect x='4' y='17' width='11' height='11' rx='2' fill='%23d9a6ff'/%3E%3Crect x='17' y='17' width='11' height='11' rx='2' fill='%235dff7f'/%3E%3C/svg%3E">
 <style>
   :root {
     color-scheme: dark;
@@ -35,6 +36,10 @@
     color: var(--text);
     font-family: system-ui, sans-serif;
     overscroll-behavior: none;
+    /* It's a game: no text selection, no iOS callout/magnifier while dragging. */
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
   #stars {
     position: fixed;
@@ -61,7 +66,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 0.75rem;
+    gap: 0.5rem;
     width: 100%;
     max-width: 30rem;
   }
@@ -71,7 +76,20 @@
     letter-spacing: 0.1em;
     color: var(--c-I);
     text-shadow: 0 0 10px rgba(0, 229, 255, 0.55), 0 0 28px rgba(0, 229, 255, 0.3);
+    flex: 1 1 auto;
   }
+  .header-btns { display: flex; gap: 0.4rem; align-items: center; }
+  .icon-btn {
+    padding: 0.4rem;
+    min-width: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .icon-btn svg { width: 1.35rem; height: 1.35rem; }
+  /* --slash-d inherits through the <use> shadow tree; class selectors can't. */
+  .icon-btn { --slash-d: none; }
+  .icon-btn[aria-pressed="false"] { --slash-d: block; opacity: 0.7; }
   #play {
     display: flex;
     flex-direction: column;
@@ -142,9 +160,6 @@
     border: 2px solid var(--border);
     border-radius: 4px;
     touch-action: none;
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-touch-callout: none;
   }
   .overlay {
     position: absolute;
@@ -153,7 +168,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.75rem;
+    gap: 0.65rem;
     background: rgba(13, 13, 26, 0.92);
     text-align: center;
     padding: 1rem;
@@ -162,7 +177,8 @@
   }
   .overlay[hidden] { display: none; }
   .overlay h2 { margin: 0; font-size: clamp(1.3rem, 4vw, 1.8rem); }
-  .overlay p { margin: 0; color: var(--label); font-size: 1rem; line-height: 1.5; }
+  .overlay p { margin: 0; color: var(--label); font-size: 0.95rem; line-height: 1.5; }
+  .overlay .mascot { width: clamp(4rem, 18vw, 6.5rem); height: auto; }
   button {
     font: inherit;
     font-size: 1.05rem;
@@ -182,6 +198,65 @@
   @media (pointer: coarse) {
     #btns-toggle { display: inline-block; }
   }
+  /* Banner + popups over the board */
+  #banner {
+    position: absolute;
+    top: 26%;
+    left: 0;
+    right: 0;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 3;
+  }
+  #banner .big {
+    display: block;
+    font-size: clamp(1.6rem, 8vw, 2.6rem);
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    text-shadow: 0 0 14px rgba(255, 214, 0, 0.7), 0 2px 4px rgba(0,0,0,0.8);
+  }
+  #banner .sub {
+    display: block;
+    font-size: clamp(0.95rem, 4vw, 1.3rem);
+    font-weight: 700;
+    color: var(--text);
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+  }
+  #banner.show { animation: banner-pop 1s ease-out forwards; }
+  @keyframes banner-pop {
+    0% { opacity: 0; transform: scale(0.6); }
+    12% { opacity: 1; transform: scale(1.12); }
+    22% { transform: scale(1); }
+    78% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.05) translateY(-8px); }
+  }
+  #mascot-pop {
+    position: absolute;
+    bottom: -2%;
+    right: -4%;
+    width: clamp(4.5rem, 26vw, 7.5rem);
+    pointer-events: none;
+    opacity: 0;
+    z-index: 3;
+  }
+  #mascot-pop.show { animation: mascot-pop 1.4s ease-out forwards; }
+  @keyframes mascot-pop {
+    0% { opacity: 0; transform: translateY(60%) rotate(-8deg); }
+    18% { opacity: 1; transform: translateY(0) rotate(3deg); }
+    32% { transform: translateY(-6%) rotate(-2deg); }
+    46% { transform: translateY(0) rotate(0); }
+    80% { opacity: 1; }
+    100% { opacity: 0; transform: translateY(55%); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #banner.show { animation: banner-fade 1s linear forwards; }
+    #mascot-pop.show { animation: banner-fade 1.4s linear forwards; }
+    @keyframes banner-fade {
+      0% { opacity: 0; } 10% { opacity: 1; } 85% { opacity: 1; } 100% { opacity: 0; }
+    }
+  }
   #touch-controls {
     display: grid;
     grid-template-columns: repeat(4, minmax(3.5rem, 5.5rem));
@@ -191,13 +266,16 @@
   }
   #touch-controls[hidden] { display: none; }
   #touch-controls button {
-    font-size: 1.4rem;
-    padding: 0.6rem 0;
+    padding: 0.5rem 0;
     min-height: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     user-select: none;
     -webkit-user-select: none;
     touch-action: none;
   }
+  #touch-controls svg { width: 1.6rem; height: 1.6rem; }
   footer {
     color: var(--label);
     font-size: 0.9rem;
@@ -236,10 +314,46 @@
 </head>
 <body>
 <canvas id="stars" aria-hidden="true"></canvas>
+
+<!-- SVG defs: icons + Keith mascot -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <g id="i-left"><path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="i-right"><path d="M9 5 L16 12 L9 19" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="i-ccw"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 3v5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="i-cw"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.85 1 6.74 2.74L21 8" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 3v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="i-down"><path d="M5 9 L12 16 L19 9" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="i-drop"><path d="M5 4 L12 10 L19 4 M5 10 L12 16 L19 10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 20 H19" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></g>
+    <g id="i-hold"><path d="M6 8 H16 M13 5 L16 8 L13 11" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M18 16 H8 M11 19 L8 16 L11 13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></g>
+    <g id="i-pause"><rect x="7" y="5" width="3.2" height="14" rx="1" fill="currentColor"/><rect x="13.8" y="5" width="3.2" height="14" rx="1" fill="currentColor"/></g>
+    <g id="i-music"><path d="M9 18 V5 l11 -2 v13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.6" fill="currentColor"/><circle cx="17.5" cy="16" r="2.6" fill="currentColor"/><path class="slash" style="display:var(--slash-d,none)" d="M3 3 L21 21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></g>
+    <g id="i-sfx"><path d="M11 5 L6.5 9 H3.5 v6 h3 L11 19 z" fill="currentColor"/><path d="M15 9 a4.5 4.5 0 0 1 0 6.2 M18 6.5 a8.5 8.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path class="slash" style="display:var(--slash-d,none)" d="M3 3 L21 21" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></g>
+    <symbol id="keith" viewBox="0 0 120 132">
+      <path d="M28 54 a32 35 0 0 1 64 0" fill="none" stroke="#23233a" stroke-width="9" stroke-linecap="round"/>
+      <path d="M22 132 q4 -27 38 -27 q34 0 38 27 z" fill="#1c1c30" stroke="#34344f" stroke-width="2"/>
+      <ellipse cx="60" cy="64" rx="30" ry="33" fill="#f3c9a4"/>
+      <path d="M31 58 q2 -27 29 -27 q27 0 29 27 q-7 -13 -29 -13 q-22 0 -29 13 z" fill="#cf9663"/>
+      <path d="M38 73 q1 23 22 23 q21 0 22 -23 q-3 15 -22 15 q-19 0 -22 -15 z" fill="#c97a45"/>
+      <rect x="19" y="50" width="14" height="23" rx="6" fill="#23233a" stroke="#00e5ff" stroke-width="1.5"/>
+      <rect x="87" y="50" width="14" height="23" rx="6" fill="#23233a" stroke="#00e5ff" stroke-width="1.5"/>
+      <rect x="38" y="56" width="18" height="13" rx="3.5" fill="none" stroke="#2b2b40" stroke-width="2.5"/>
+      <rect x="64" y="56" width="18" height="13" rx="3.5" fill="none" stroke="#2b2b40" stroke-width="2.5"/>
+      <path d="M56 61 H64" stroke="#2b2b40" stroke-width="2.5"/>
+      <circle cx="47" cy="62.5" r="2.4" fill="#2b2b40"/>
+      <circle cx="73" cy="62.5" r="2.4" fill="#2b2b40"/>
+      <path d="M50 82 q10 8 20 0" fill="none" stroke="#7a4220" stroke-width="2.5" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+
 <div id="app">
   <header>
     <h1>KEITHRIS</h1>
-    <button id="pause-btn">Pause</button>
+    <div class="header-btns">
+      <button id="music-btn" class="icon-btn" aria-label="Music" aria-pressed="true"><svg viewBox="0 0 24 24"><use href="#i-music"/></svg></button>
+      <button id="sfx-btn" class="icon-btn" aria-label="Sound effects" aria-pressed="true"><svg viewBox="0 0 24 24"><use href="#i-sfx"/></svg></button>
+      <button id="pause-btn">Pause</button>
+    </div>
   </header>
   <div id="play">
     <div id="hud">
@@ -254,7 +368,10 @@
     <div class="board-area">
       <div class="board-wrap">
         <canvas id="board" width="300" height="600" aria-label="Keithris game board. On touch screens: drag to move, tap to rotate, flick down to drop."></canvas>
+        <div id="banner" aria-hidden="true"><span class="big"></span><span class="sub"></span></div>
+        <svg id="mascot-pop" aria-hidden="true"><use href="#keith"/></svg>
         <div class="overlay" id="overlay">
+          <svg class="mascot" viewBox="0 0 120 132" aria-hidden="true"><use href="#keith"/></svg>
           <h2 id="overlay-title">Keithris</h2>
           <p id="overlay-text">A Tetris game for Keith.</p>
           <button id="overlay-btn" class="primary">Start</button>
@@ -264,18 +381,19 @@
     </div>
   </div>
   <div id="touch-controls" aria-label="Game controls" hidden>
-    <button id="t-left" aria-label="Move left">◀</button>
-    <button id="t-right" aria-label="Move right">▶</button>
-    <button id="t-ccw" aria-label="Rotate counter-clockwise">⟲</button>
-    <button id="t-cw" aria-label="Rotate clockwise">⟳</button>
-    <button id="t-down" aria-label="Soft drop">▼</button>
-    <button id="t-drop" aria-label="Hard drop">⤓</button>
-    <button id="t-hold" aria-label="Hold piece">⇄</button>
-    <button id="t-pause" aria-label="Pause">⏸</button>
+    <button id="t-left" aria-label="Move left"><svg viewBox="0 0 24 24"><use href="#i-left"/></svg></button>
+    <button id="t-right" aria-label="Move right"><svg viewBox="0 0 24 24"><use href="#i-right"/></svg></button>
+    <button id="t-ccw" aria-label="Rotate counter-clockwise"><svg viewBox="0 0 24 24"><use href="#i-ccw"/></svg></button>
+    <button id="t-cw" aria-label="Rotate clockwise"><svg viewBox="0 0 24 24"><use href="#i-cw"/></svg></button>
+    <button id="t-down" aria-label="Soft drop"><svg viewBox="0 0 24 24"><use href="#i-down"/></svg></button>
+    <button id="t-drop" aria-label="Hard drop"><svg viewBox="0 0 24 24"><use href="#i-drop"/></svg></button>
+    <button id="t-hold" aria-label="Hold piece"><svg viewBox="0 0 24 24"><use href="#i-hold"/></svg></button>
+    <button id="t-pause" aria-label="Pause"><svg viewBox="0 0 24 24"><use href="#i-pause"/></svg></button>
   </div>
   <footer>
     <kbd>←</kbd> <kbd>→</kbd> move · <kbd>↓</kbd> soft drop · <kbd>Space</kbd> hard drop ·
-    <kbd>Z</kbd>/<kbd>X</kbd> or <kbd>↑</kbd> rotate · <kbd>C</kbd> hold · <kbd>P</kbd> pause
+    <kbd>Z</kbd>/<kbd>X</kbd> or <kbd>↑</kbd> rotate · <kbd>C</kbd> hold · <kbd>P</kbd> pause ·
+    <kbd>M</kbd> music · <kbd>S</kbd> sounds
   </footer>
 </div>
 <div id="status" role="status" aria-live="polite"></div>
@@ -288,7 +406,8 @@ const COLS = 10, VISIBLE = 20, HIDDEN = 2, ROWS = VISIBLE + HIDDEN;
 const DAS = 170, ARR = 45;           // delayed auto-shift, auto-repeat (ms)
 const LOCK_DELAY = 500, MAX_LOCK_RESETS = 15;
 const PREVIEW_COUNT = 3;
-const FLASH_MS = 160;
+// Guideline games pause gravity ~400-700ms while cleared lines animate away.
+const CLEAR_MS = 450, CLEAR_MS_REDUCED = 150;
 
 const SHAPES = {
   I: [[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
@@ -328,6 +447,7 @@ const KICKS_I = {
 };
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
+const CLEAR_NAMES = [null, null, 'DOUBLE!', 'TRIPLE!', 'TETRIS!'];
 
 // ---------- State ----------
 let board, cur, holdType, canHold, bag, queue;
@@ -336,8 +456,9 @@ let state = 'menu'; // menu | playing | paused | over
 let softDropping = false;
 let lastTime = 0;
 let pieceSeq = 0;          // bumps every spawn; lets gestures detect piece changes
-let flashRows = null;      // visible row indices being flashed
-let flashUntil = 0;
+let clearing = null;       // { rows: [board indices], start, dur } — gravity paused while set
+let b2b = false;           // back-to-back Tetris bonus
+let particles = [];        // { c, r, vx, vy, t0, life, color, size } in cell units
 
 const REDUCED_MOTION = window.matchMedia('(prefers-reduced-motion: reduce)');
 const COARSE = window.matchMedia('(pointer: coarse)').matches;
@@ -360,6 +481,12 @@ const statusEl = document.getElementById('status');
 const pauseBtn = document.getElementById('pause-btn');
 const touchControls = document.getElementById('touch-controls');
 const btnsToggle = document.getElementById('btns-toggle');
+const bannerEl = document.getElementById('banner');
+const bannerBig = bannerEl.querySelector('.big');
+const bannerSub = bannerEl.querySelector('.sub');
+const mascotPop = document.getElementById('mascot-pop');
+const musicBtn = document.getElementById('music-btn');
+const sfxBtn = document.getElementById('sfx-btn');
 
 function capturePointer(el, e) {
   try { el.setPointerCapture(e.pointerId); } catch (err) { /* synthetic or stale pointer */ }
@@ -367,6 +494,136 @@ function capturePointer(el, e) {
 
 const GESTURE_HINTS = 'Drag to move · tap to rotate (left third rotates the other way) · drag down to soft drop · flick down to hard drop · swipe up to hold.';
 const KEY_HINTS = 'Arrow keys move · Z/X rotate · Space drops · C holds · P pauses.';
+
+// ---------- Audio (WebAudio, generated from scratch — no files) ----------
+// Music: Korobeiniki, the 1861 Russian folk melody (public domain).
+const NOTE_FREQ = {
+  A4: 440, B4: 493.88, C5: 523.25, D5: 587.33, E5: 659.25,
+  F5: 698.46, G5: 783.99, A5: 880,
+};
+// [note, beats]; null = rest
+const MELODY = [
+  ['E5',1],['B4',.5],['C5',.5],['D5',1],['C5',.5],['B4',.5],
+  ['A4',1],['A4',.5],['C5',.5],['E5',1],['D5',.5],['C5',.5],
+  ['B4',1],['B4',.5],['C5',.5],['D5',1],['E5',1],
+  ['C5',1],['A4',1],['A4',1],[null,1],
+  ['D5',1],['D5',.5],['F5',.5],['A5',1],['G5',.5],['F5',.5],
+  ['E5',1],['E5',.5],['C5',.5],['E5',1],['D5',.5],['C5',.5],
+  ['B4',1],['B4',.5],['C5',.5],['D5',1],['E5',1],
+  ['C5',1],['A4',1],['A4',1],[null,1],
+];
+const BEAT = 60 / 140; // 140 bpm
+
+const audio = { ctx: null, musicGain: null, timer: null, nextTime: 0, idx: 0 };
+let musicOn = true, sfxOn = true;
+try {
+  musicOn = localStorage.getItem('keithris-music') !== '0';
+  sfxOn = localStorage.getItem('keithris-sfx') !== '0';
+} catch (err) { /* private mode */ }
+
+function ensureAudio() {
+  if (!audio.ctx) {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return false;
+    audio.ctx = new AC();
+    const lp = audio.ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 2400;
+    lp.connect(audio.ctx.destination);
+    audio.musicGain = audio.ctx.createGain();
+    audio.musicGain.gain.value = 0.13;
+    audio.musicGain.connect(lp);
+  }
+  if (audio.ctx.state === 'suspended') audio.ctx.resume();
+  return true;
+}
+
+function playTone(freq, when, dur, type, vol, dest) {
+  const c = audio.ctx;
+  const osc = c.createOscillator();
+  const g = c.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  g.gain.setValueAtTime(0, when);
+  g.gain.linearRampToValueAtTime(vol, when + 0.012);
+  g.gain.setValueAtTime(vol, Math.max(when + 0.012, when + dur - 0.04));
+  g.gain.linearRampToValueAtTime(0.0001, when + dur);
+  osc.connect(g);
+  g.connect(dest || c.destination);
+  osc.start(when);
+  osc.stop(when + dur + 0.02);
+}
+
+function scheduleMusic() {
+  const c = audio.ctx;
+  while (audio.nextTime < c.currentTime + 0.35) {
+    const [name, beats] = MELODY[audio.idx];
+    const dur = beats * BEAT;
+    if (name) playTone(NOTE_FREQ[name], audio.nextTime, dur * 0.88, 'square', 0.5, audio.musicGain);
+    audio.nextTime += dur;
+    audio.idx = (audio.idx + 1) % MELODY.length;
+  }
+}
+
+function startMusic(restart) {
+  if (!musicOn || !ensureAudio()) return;
+  stopMusic();
+  if (restart) audio.idx = 0;
+  audio.nextTime = audio.ctx.currentTime + 0.08;
+  audio.timer = setInterval(scheduleMusic, 90);
+  scheduleMusic();
+}
+
+function stopMusic() {
+  if (audio.timer) { clearInterval(audio.timer); audio.timer = null; }
+}
+
+function sfx(kind) {
+  if (!sfxOn || !ensureAudio()) return;
+  const c = audio.ctx, t = c.currentTime;
+  const v = 0.10;
+  switch (kind) {
+    case 'move':   playTone(220, t, 0.035, 'square', v * 0.4); break;
+    case 'rotate': playTone(330, t, 0.05, 'square', v * 0.55); break;
+    case 'lock':   playTone(140, t, 0.07, 'triangle', v * 1.1); break;
+    case 'hold':   playTone(392, t, 0.05, 'square', v * 0.6); playTone(523.25, t + 0.06, 0.06, 'square', v * 0.6); break;
+    case 'clear':  playTone(587.33, t, 0.09, 'square', v); playTone(880, t + 0.09, 0.12, 'square', v); break;
+    case 'tetris':
+      [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => playTone(f, t + i * 0.07, 0.12, 'square', v * 1.2));
+      playTone(1318.5, t + 0.30, 0.25, 'square', v * 1.2);
+      break;
+    case 'levelup':
+      [440, 554.37, 659.25].forEach((f, i) => playTone(f, t + i * 0.08, 0.1, 'triangle', v * 1.1));
+      break;
+    case 'over':
+      [392, 311.13, 233.08].forEach((f, i) => playTone(f, t + i * 0.16, 0.22, 'triangle', v * 1.2));
+      break;
+  }
+}
+
+function applyAudioPrefs() {
+  musicBtn.setAttribute('aria-pressed', String(musicOn));
+  sfxBtn.setAttribute('aria-pressed', String(sfxOn));
+}
+
+function toggleMusic() {
+  musicOn = !musicOn;
+  try { localStorage.setItem('keithris-music', musicOn ? '1' : '0'); } catch (err) { /* ignore */ }
+  applyAudioPrefs();
+  if (musicOn && state === 'playing') startMusic(false);
+  else stopMusic();
+  announce(musicOn ? 'Music on' : 'Music off');
+}
+
+function toggleSfx() {
+  sfxOn = !sfxOn;
+  try { localStorage.setItem('keithris-sfx', sfxOn ? '1' : '0'); } catch (err) { /* ignore */ }
+  applyAudioPrefs();
+  announce(sfxOn ? 'Sound effects on' : 'Sound effects off');
+}
+
+musicBtn.addEventListener('click', toggleMusic);
+sfxBtn.addEventListener('click', toggleSfx);
 
 // ---------- Helpers ----------
 function emptyBoard() {
@@ -436,6 +693,7 @@ function nextPiece() {
   drawPreviews();
 }
 
+// Guideline (Tetris Worlds) gravity: level 1 = 1.000 s/row.
 function gravityMs(lvl) {
   return Math.max(16, Math.pow(0.8 - (lvl - 1) * 0.007, lvl - 1) * 1000);
 }
@@ -446,6 +704,7 @@ function tryMove(dr, dc) {
   if (!collides(cur.matrix, cur.row + dr, cur.col + dc)) {
     cur.row += dr;
     cur.col += dc;
+    if (dc !== 0) sfx('move');
     onSuccessfulShift();
     return true;
   }
@@ -473,6 +732,7 @@ function tryRotate(dir) {
       cur.row -= dy;
       cur.col += dx;
       cur.rot = to;
+      sfx('rotate');
       onSuccessfulShift();
       return;
     }
@@ -496,6 +756,7 @@ function holdPiece() {
   holdType = cur.type;
   cur = prev ? spawnPiece(prev) : null;
   pieceSeq++;
+  sfx('hold');
   if (!prev) nextPiece();
   else {
     canHold = false;
@@ -516,38 +777,111 @@ function lockPiece() {
     }
   }
   if (allHidden) { gameOver(); return; }
-  clearLines();
-  nextPiece();
+  const rows = fullRows();
+  if (rows.length) {
+    startClearing(rows);
+  } else {
+    sfx('lock');
+    nextPiece();
+  }
 }
 
-function clearLines() {
-  let cleared = 0;
-  const flashed = [];
-  for (let r = ROWS - 1; r >= 0; r--) {
-    if (board[r].every(cell => cell !== null)) {
-      flashed.push(r - HIDDEN);
-      board.splice(r, 1);
-      board.unshift(Array(COLS).fill(null));
-      cleared++;
-      r++; // re-check same index after splice
+function fullRows() {
+  const out = [];
+  for (let r = 0; r < ROWS; r++) {
+    if (board[r].every(cell => cell !== null)) out.push(r);
+  }
+  return out;
+}
+
+// Line clear ceremony: pause gravity, animate, then collapse and spawn.
+function startClearing(rows) {
+  cur = null;
+  pieceSeq++;
+  const n = rows.length;
+  let pts = LINE_SCORES[n] * level;
+  let b2bBonus = false;
+  if (n === 4) {
+    if (b2b) { pts = Math.floor(pts * 1.5); b2bBonus = true; }
+    b2b = true;
+  } else {
+    b2b = false;
+  }
+  addScore(pts);
+  linesCleared += n;
+  linesEl.textContent = linesCleared;
+
+  const reduced = REDUCED_MOTION.matches;
+  clearing = { rows, start: performance.now(), dur: reduced ? CLEAR_MS_REDUCED : CLEAR_MS };
+
+  if (!reduced) spawnClearParticles(rows, n === 4);
+  if (CLEAR_NAMES[n]) showBanner(CLEAR_NAMES[n], `+${pts.toLocaleString()}${b2bBonus ? ' · BACK-TO-BACK ×1.5' : ''}`);
+  else showBanner('', `+${pts.toLocaleString()}`);
+  if (n === 4) {
+    celebrateMascot();
+    sfx('tetris');
+    announce(`Tetris! ${b2bBonus ? 'Back to back! ' : ''}Plus ${pts} points`);
+  } else {
+    sfx('clear');
+    announce(`${n === 1 ? 'Line clear' : n + ' lines'}. Plus ${pts} points`);
+  }
+
+  const newLevel = Math.floor(linesCleared / 10) + 1;
+  if (newLevel > level) {
+    level = newLevel;
+    levelEl.textContent = level;
+    sfx('levelup');
+    announce(`Level ${level}`);
+  }
+}
+
+function finishClearing() {
+  const rows = clearing.rows.slice().sort((a, b) => a - b);
+  for (const r of rows) {
+    board.splice(r, 1);
+    board.unshift(Array(COLS).fill(null));
+  }
+  clearing = null;
+  if (state === 'playing') nextPiece();
+}
+
+function showBanner(big, sub) {
+  bannerBig.textContent = big;
+  bannerSub.textContent = sub;
+  bannerEl.classList.remove('show');
+  void bannerEl.offsetWidth; // restart animation
+  bannerEl.classList.add('show');
+}
+
+function celebrateMascot() {
+  mascotPop.classList.remove('show');
+  void mascotPop.getBoundingClientRect();
+  mascotPop.classList.add('show');
+}
+
+function spawnClearParticles(rows, big) {
+  const now = performance.now();
+  for (const r of rows) {
+    const vr = r - HIDDEN;
+    if (vr < 0) continue;
+    for (let c = 0; c < COLS; c++) {
+      const color = COLORS[board[r][c]] || '#ffffff';
+      const n = big ? 2 : 1;
+      for (let i = 0; i < n; i++) {
+        particles.push({
+          c: c + 0.2 + Math.random() * 0.6,
+          r: vr + 0.2 + Math.random() * 0.6,
+          vx: (Math.random() - 0.5) * 6,
+          vy: -(2 + Math.random() * 5),
+          t0: now,
+          life: 500 + Math.random() * 300,
+          color,
+          size: 0.12 + Math.random() * 0.14,
+        });
+      }
     }
   }
-  if (cleared > 0) {
-    if (!REDUCED_MOTION.matches) {
-      flashRows = flashed;
-      flashUntil = performance.now() + FLASH_MS;
-    }
-    addScore(LINE_SCORES[cleared] * level);
-    linesCleared += cleared;
-    linesEl.textContent = linesCleared;
-    const newLevel = Math.floor(linesCleared / 10) + 1;
-    if (newLevel > level) {
-      level = newLevel;
-      levelEl.textContent = level;
-      announce(`Level ${level}`);
-    }
-    if (cleared === 4) announce('Tetris!');
-  }
+  if (particles.length > 400) particles.splice(0, particles.length - 400);
 }
 
 function addScore(n) {
@@ -567,21 +901,25 @@ function startGame() {
   queue = [];
   holdType = null;
   score = 0; level = 1; linesCleared = 0;
+  b2b = false;
+  clearing = null;
+  particles = [];
   scoreEl.textContent = '0';
   levelEl.textContent = '1';
   linesEl.textContent = '0';
-  flashRows = null;
   state = 'playing';
   overlay.hidden = true;
   pauseBtn.textContent = 'Pause';
   announce('Game started');
   nextPiece();
+  startMusic(true);
   lastTime = performance.now();
 }
 
 function togglePause() {
   if (state === 'playing') {
     state = 'paused';
+    stopMusic();
     showOverlay('Paused', 'Press P or Resume to continue.', 'Resume');
     pauseBtn.textContent = 'Resume';
     announce('Paused');
@@ -590,6 +928,7 @@ function togglePause() {
     overlay.hidden = true;
     pauseBtn.textContent = 'Pause';
     lastTime = performance.now();
+    startMusic(false);
     announce('Resumed');
   }
 }
@@ -597,6 +936,8 @@ function togglePause() {
 function gameOver() {
   state = 'over';
   cur = null;
+  stopMusic();
+  sfx('over');
   showOverlay('Game over', `Score: ${score.toLocaleString()} · Lines: ${linesCleared}`, 'Play again');
   announce(`Game over. Final score ${score}`);
 }
@@ -610,6 +951,7 @@ function showOverlay(title, text, btnLabel) {
 }
 
 overlayBtn.addEventListener('click', () => {
+  ensureAudio(); // user gesture: unlock audio on iOS
   if (state === 'paused') togglePause();
   else startGame();
 });
@@ -625,7 +967,10 @@ document.addEventListener('visibilitychange', () => {
 function update(time) {
   requestAnimationFrame(update);
   fitCanvas();
-  if (state === 'playing' && cur) {
+  if (state === 'playing' && clearing) {
+    lastTime = time;
+    if (performance.now() - clearing.start >= clearing.dur) finishClearing();
+  } else if (state === 'playing' && cur) {
     const dt = Math.min(time - lastTime, 100);
     lastTime = time;
     const interval = softDropping ? Math.min(50, gravityMs(level) / 20) : gravityMs(level);
@@ -637,7 +982,7 @@ function update(time) {
         else grounded = false;
       }
     }
-    while (dropTimer >= interval) {
+    while (dropTimer >= interval && cur) {
       dropTimer -= interval;
       if (!collides(cur.matrix, cur.row + 1, cur.col)) {
         cur.row++;
@@ -691,10 +1036,35 @@ function draw() {
   }
   ctx.stroke();
 
-  // Settled cells
+  const now = performance.now();
+  const clearingSet = clearing ? new Set(clearing.rows) : null;
+  const clearP = clearing ? Math.min(1, (now - clearing.start) / clearing.dur) : 0;
+
+  // Settled cells (cleared rows animate: white pulse, then shrink + fade)
   for (let r = HIDDEN; r < ROWS; r++) {
+    const isClearing = clearingSet && clearingSet.has(r);
     for (let c = 0; c < COLS; c++) {
-      if (board[r] && board[r][c]) drawCell(ctx, c, r - HIDDEN, cell, COLORS[board[r][c]], 1, false);
+      if (!board[r] || !board[r][c]) continue;
+      const y = r - HIDDEN;
+      if (!isClearing) {
+        drawCell(ctx, c, y, cell, COLORS[board[r][c]], 1, false);
+      } else if (REDUCED_MOTION.matches) {
+        drawCell(ctx, c, y, cell, COLORS[board[r][c]], 1 - clearP * 0.8, false);
+      } else if (clearP < 0.25) {
+        drawCell(ctx, c, y, cell, COLORS[board[r][c]], 1, false);
+        ctx.fillStyle = '#ffffff';
+        ctx.globalAlpha = clearP / 0.25 * 0.85;
+        ctx.fillRect(c * cell, y * cell, cell, cell);
+        ctx.globalAlpha = 1;
+      } else {
+        const p = (clearP - 0.25) / 0.75;
+        const s = 1 - p;
+        const inset = cell * (1 - s) / 2;
+        ctx.globalAlpha = 1 - p;
+        ctx.fillStyle = COLORS[board[r][c]];
+        ctx.fillRect(c * cell + inset, y * cell + inset, cell * s, cell * s);
+        ctx.globalAlpha = 1;
+      }
     }
   }
 
@@ -715,17 +1085,22 @@ function draw() {
     });
   }
 
-  // Line-clear flash
-  if (flashRows) {
-    const now = performance.now();
-    if (now < flashUntil) {
-      ctx.fillStyle = '#ffffff';
-      ctx.globalAlpha = 0.8 * (flashUntil - now) / FLASH_MS;
-      for (const r of flashRows) ctx.fillRect(0, r * cell, fw, cell);
-      ctx.globalAlpha = 1;
-    } else {
-      flashRows = null;
+  // Particles
+  if (particles.length) {
+    let alive = false;
+    for (const p of particles) {
+      const t = (now - p.t0) / 1000;
+      if (t * 1000 > p.life) continue;
+      alive = true;
+      const px = (p.c + p.vx * t) * cell;
+      const py = (p.r + p.vy * t + 6 * t * t) * cell;
+      ctx.globalAlpha = Math.max(0, 1 - (t * 1000) / p.life);
+      ctx.fillStyle = p.color;
+      const s = p.size * cell;
+      ctx.fillRect(px - s / 2, py - s / 2, s, s);
     }
+    ctx.globalAlpha = 1;
+    if (!alive) particles = [];
   }
 
   ctx.restore();
@@ -863,8 +1238,10 @@ function stopAllRepeats() {
 document.addEventListener('keydown', (e) => {
   if (e.repeat) return;
   const k = e.key;
+  if (k === 'm' || k === 'M') { toggleMusic(); return; }
+  if (k === 's' || k === 'S') { toggleSfx(); return; }
   if (state === 'menu' || state === 'over') {
-    if (k === 'Enter') { e.preventDefault(); startGame(); }
+    if (k === 'Enter') { e.preventDefault(); ensureAudio(); startGame(); }
     return;
   }
   switch (k) {
@@ -890,18 +1267,19 @@ document.addEventListener('keyup', (e) => {
 window.addEventListener('blur', stopAllRepeats);
 
 // ---------- Gestures on the board ----------
-// Drag horizontally: piece follows finger cell-by-cell.
-// Drag down: soft drop cell-by-cell. Fast downward flick: hard drop.
+// Axis-locked: a drag that starts horizontal can't accidentally soft drop
+// (the v02 "level 1 feels fast" bug). A clear downward plunge upgrades h -> v.
 // Tap right two-thirds: rotate CW. Tap left third: rotate CCW. Swipe up: hold.
 const TAP_MS = 250, TAP_SLOP = 10;
 const FLICK_VY = 0.7;      // px/ms downward at release
 const FLICK_MIN_DY = 24;   // px total downward travel
 const SWIPE_UP_DY = -30;   // px total upward travel
+const H_TO_V_CELLS = 2;    // downward cells of travel to upgrade a horizontal drag
 
 const gesture = {
-  active: false, id: null, seq: 0,
+  active: false, id: null, seq: 0, axis: null,
   startX: 0, startY: 0, startTime: 0,
-  baseCol: 0, baseY: 0,
+  baseCol: 0, baseY: 0, lockY: 0,
   moved: false, trace: [],
 };
 
@@ -918,11 +1296,13 @@ cvs.addEventListener('pointerdown', (e) => {
   gesture.active = true;
   gesture.id = e.pointerId;
   gesture.seq = pieceSeq;
+  gesture.axis = null;
   gesture.startX = e.clientX;
   gesture.startY = e.clientY;
   gesture.startTime = performance.now();
   gesture.baseCol = cur.col;
   gesture.baseY = e.clientY;
+  gesture.lockY = e.clientY;
   gesture.moved = false;
   gesture.trace = [{ y: e.clientY, t: performance.now() }];
 });
@@ -938,6 +1318,7 @@ cvs.addEventListener('pointermove', (e) => {
     gesture.startX = e.clientX;
     gesture.baseCol = cur.col;
     gesture.baseY = e.clientY;
+    gesture.lockY = e.clientY;
   }
 
   const cellPx = gestureCellPx();
@@ -945,22 +1326,41 @@ cvs.addEventListener('pointermove', (e) => {
 
   const dx = e.clientX - gesture.startX;
   const dyTotal = e.clientY - gesture.startY;
-  if (Math.abs(dx) > TAP_SLOP || Math.abs(dyTotal) > TAP_SLOP) gesture.moved = true;
 
-  // Horizontal: step toward the column under the finger.
+  // Decide the gesture's axis once it leaves the tap slop.
+  if (!gesture.axis && (Math.abs(dx) > TAP_SLOP || Math.abs(dyTotal) > TAP_SLOP)) {
+    gesture.axis = Math.abs(dx) >= Math.abs(dyTotal) ? 'h' : 'v';
+    gesture.moved = true;
+    gesture.lockY = e.clientY;
+    gesture.baseY = e.clientY;
+  }
+
+  // A deliberate downward plunge upgrades a horizontal drag to vertical.
+  if (gesture.axis === 'h') {
+    gesture.lockY = Math.min(gesture.lockY, e.clientY);
+    if (e.clientY - gesture.lockY > H_TO_V_CELLS * cellPx) {
+      gesture.axis = 'v';
+      gesture.baseY = e.clientY;
+    }
+  }
+
+  // Horizontal: step toward the column under the finger (allowed on both axes,
+  // so you can steer while soft dropping).
   const targetCol = gesture.baseCol + Math.round(dx / cellPx);
   let guard = COLS;
   while (cur && cur.col < targetCol && guard-- > 0) { if (!tryMove(0, 1)) break; }
   guard = COLS;
   while (cur && cur.col > targetCol && guard-- > 0) { if (!tryMove(0, -1)) break; }
 
-  // Vertical: soft drop one cell per cell-height dragged. Never moves up.
-  gesture.baseY = Math.min(gesture.baseY, e.clientY);
-  let guardV = VISIBLE;
-  while (cur && e.clientY - gesture.baseY >= cellPx && guardV-- > 0) {
-    if (tryMove(1, 0)) addScore(1);
-    else break;
-    gesture.baseY += cellPx;
+  // Vertical soft drop: only when this gesture is vertical. Never moves up.
+  if (gesture.axis === 'v') {
+    gesture.baseY = Math.min(gesture.baseY, e.clientY);
+    let guardV = VISIBLE;
+    while (cur && e.clientY - gesture.baseY >= cellPx && guardV-- > 0) {
+      if (tryMove(1, 0)) addScore(1);
+      else break;
+      gesture.baseY += cellPx;
+    }
   }
 
   const now = performance.now();
@@ -985,6 +1385,9 @@ function endGesture(e, cancelled) {
     else tryRotate(1);
     return;
   }
+
+  // The big endings need a vertical gesture.
+  if (gesture.axis !== 'v') return;
 
   // Swipe up: hold.
   if (dy <= SWIPE_UP_DY && Math.abs(dy) > Math.abs(dx) && duration < 400) {
@@ -1056,11 +1459,31 @@ bindTapButton('t-drop', hardDrop);
 bindTapButton('t-hold', holdPiece);
 bindTapButton('t-pause', () => { if (state === 'playing' || state === 'paused') togglePause(); });
 
+// ---------- Test hook (used by the automated harness; harmless in play) ----------
+window.__kt = {
+  get state() { return state; },
+  get score() { return score; },
+  get level() { return level; },
+  get lines() { return linesCleared; },
+  get clearing() { return !!clearing; },
+  get cur() { return cur; },
+  get hasAudio() { return !!audio.ctx; },
+  fillRow(visRow, gapCol) {
+    const r = visRow + HIDDEN;
+    for (let c = 0; c < COLS; c++) board[r][c] = c === gapCol ? null : 'J';
+  },
+  forceSpawn(type) { cur = spawnPiece(type); pieceSeq++; },
+  setCol(c) { if (cur) cur.col = c; },
+  rotate(dir) { tryRotate(dir); },
+  hardDrop,
+};
+
 // ---------- Boot ----------
 board = emptyBoard();
 queue = [];
 bag = [];
 applyButtonsPref();
+applyAudioPrefs();
 overlayText.textContent = 'A Tetris game for Keith. ' + (COARSE ? GESTURE_HINTS : KEY_HINTS);
 requestAnimationFrame(update);
 </script>
